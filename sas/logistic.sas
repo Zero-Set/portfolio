@@ -20,7 +20,7 @@
         oddsratio &explanatory;
     run;
     
-    data nobs&counter(keep=n outid nobsread); 
+    data nobs&counter(keep=n counter nobsread); 
         set nobs&counter;
         where label='使用されたオブザベーション';
         counter=&counter;
