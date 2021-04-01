@@ -1,0 +1,9 @@
+version: '3'
+services:
+  web:
+#    image: sigver6/phpbq:0.0.1
+    build: .
+    command: "php hello.php"
+    container_name: webcontainer
+#    volumes: 
+#      - ./:/opt/dataeng/

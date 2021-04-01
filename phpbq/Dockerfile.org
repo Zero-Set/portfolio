@@ -1,0 +1,42 @@
+# イメージ:sigver6/phpbq:0.0.1 作成のためのDockerfile
+FROM alpine
+
+RUN mkdir /opt/dataeng/
+WORKDIR /opt/dataeng/
+COPY . /opt/dataeng/
+
+ADD docker-php.ini /etc/php/7.1/conf.d/
+
+RUN apk add --no-cache wget ca-certificates \
+&& wget -O /etc/apk/keys/phpearth.rsa.pub https://repos.php.earth/alpine/phpearth.rsa.pub \
+&& echo "https://repos.php.earth/alpine/v3.7" >> /etc/apk/repositories
+RUN apk add php7.1
+RUN apk add php7-json php7-phar php7-iconv php7-openssl
+
+RUN apk add --no-cache --virtual .build-deps make gcc g++
+
+# composerのインストール前準備:iconvの問題が発生するので、buildしなおす必要がある。
+RUN apk add --no-cache --virtual .buiuld-deps curl make gcc g++
+RUN curl -SL http://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.15.tar.gz | tar -xz -C ~/
+RUN mv ~/libiconv-1.15 ~/libiconv
+RUN rm /usr/bin/iconv
+RUN ~/libiconv/configure --prefix=/usr/bin
+RUN make
+RUN make install
+
+# export 
+ENV LD_PRELOAD /usr/bin/lib/preloadable_libiconv.so
+
+# composer
+# httpにしないと無理そう。(httpsでの手順になると、環境の修正が必要というか、そもそも手動実行でもよい？)
+RUN php -r "copy('http://getcomposer.org/installer', 'composer-setup.php');"
+RUN php -r "if (hash_file('sha384', 'composer-setup.php') === '756890a4488ce9024fc62c56153228907f1545c228516cbf63f885e036d37e9a59d27d63f46af1d4d07ee0f76181c7d3') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+RUN php composer-setup.php
+# 削除
+RUN php -r "unlink('composer-setup.php');"
+
+# コマンドを使いたいので、/usr/local/bin配下に移動
+RUN cp -p composer.phar /usr/local/bin/composer
+
+# https://googleapis.github.io/google-cloud-php/#/docs/cloud-bigquery/v1.21.0/bigquery/readme
+RUN composer require google/cloud-bigquery
